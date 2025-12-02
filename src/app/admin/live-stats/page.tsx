@@ -124,13 +124,10 @@ const LiveStatsPage: React.FC = () => {
   // 检查是否支持统计
   const storageType =
     typeof window !== 'undefined' &&
-    (window as Record<string, unknown>).RUNTIME_CONFIG?.STORAGE_TYPE
-      ? (
-          (window as Record<string, unknown>).RUNTIME_CONFIG as Record<
-            string,
-            unknown
-          >
-        ).STORAGE_TYPE
+    (window as { RUNTIME_CONFIG?: { STORAGE_TYPE?: string } }).RUNTIME_CONFIG
+      ?.STORAGE_TYPE
+      ? (window as { RUNTIME_CONFIG?: { STORAGE_TYPE?: string } })
+          .RUNTIME_CONFIG?.STORAGE_TYPE
       : 'localstorage';
 
   useEffect(() => {

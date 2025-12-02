@@ -62,8 +62,8 @@ export const UserMenu: React.FC = () => {
     // 🔧 优化：直接从 RUNTIME_CONFIG 读取初始值，避免默认值导致的多次渲染
     if (typeof window !== 'undefined') {
       return (
-        (window as Record<string, unknown>).RUNTIME_CONFIG?.STORAGE_TYPE ||
-        'localstorage'
+        (window as { RUNTIME_CONFIG?: { STORAGE_TYPE?: string } })
+          .RUNTIME_CONFIG?.STORAGE_TYPE || 'localstorage'
       );
     }
     return 'localstorage';

@@ -381,6 +381,11 @@ export async function configSelfCheck(
     adminConfig.SiteConfig = {
       SiteName: process.env.NEXT_PUBLIC_SITE_NAME || 'MoonTV',
       Announcement: process.env.ANNOUNCEMENT || '',
+      SearchDownstreamMaxPage: parseInt(
+        process.env.NEXT_PUBLIC_SEARCH_MAX_PAGE || '5',
+        10
+      ),
+      SiteInterfaceCacheTime: 7200,
       DoubanProxyType:
         (process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE as any) ||
         'cmliussss-cdn-tencent',
@@ -391,10 +396,7 @@ export async function configSelfCheck(
       DoubanImageProxy: process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY || '',
       DisableYellowFilter:
         process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
-      SearchMaxPage: parseInt(
-        process.env.NEXT_PUBLIC_SEARCH_MAX_PAGE || '5',
-        10
-      ),
+      ShowAdultContent: false,
       FluidSearch: process.env.NEXT_PUBLIC_FLUID_SEARCH !== 'false',
       TMDBApiKey: process.env.TMDB_API_KEY || '',
       TMDBLanguage: 'zh-CN',

@@ -290,12 +290,57 @@ function LivePageClient() {
   const viewStartTimeRef = useRef<number | null>(null);
   const currentViewChannelRef = useRef<LiveChannel | null>(null);
   const currentViewSourceRef = useRef<LiveSource | null>(null);
+  const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // -----------------------------------------------------------------------------
   // 工具函数（Utils）
   // -----------------------------------------------------------------------------
 
-  // 记录直播观看
+  // 记录直播观看（不重置状态，用于定期保存）
+  const recordLiveViewWithoutReset = async () => {
+    if (
+      !viewStartTimeRef.current ||
+      !currentViewChannelRef.current ||
+      !currentViewSourceRef.current
+    ) {
+      return;
+    }
+
+    const endTime = Date.now();
+    const startTime = viewStartTimeRef.current;
+    const duration = endTime - startTime;
+
+    // 只记录观看时长大于5秒的记录
+    if (duration < 5000) {
+      return;
+    }
+
+    try {
+      await fetch('/api/live/record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          channelName: currentViewChannelRef.current.name,
+          channelId: currentViewChannelRef.current.id,
+          sourceName: currentViewSourceRef.current.name,
+          sourceKey: currentViewSourceRef.current.key,
+          startTime,
+          endTime,
+          channelGroup: currentViewChannelRef.current.group,
+          channelLogo: currentViewChannelRef.current.logo,
+        }),
+      });
+
+      // 记录成功后，更新开始时间为当前时间，继续追踪
+      viewStartTimeRef.current = endTime;
+    } catch (error) {
+      console.error('记录直播观看失败:', error);
+    }
+  };
+
+  // 记录直播观看（重置状态，用于停止追踪）
   const recordLiveView = async () => {
     if (
       !viewStartTimeRef.current ||
@@ -311,6 +356,9 @@ function LivePageClient() {
 
     // 只记录观看时长大于5秒的记录
     if (duration < 5000) {
+      viewStartTimeRef.current = null;
+      currentViewChannelRef.current = null;
+      currentViewSourceRef.current = null;
       return;
     }
 
@@ -348,10 +396,34 @@ function LivePageClient() {
       recordLiveView();
     }
 
+    // 清除之前的定时器
+    if (autoSaveIntervalRef.current) {
+      clearInterval(autoSaveIntervalRef.current);
+    }
+
     // 开始新的追踪
     viewStartTimeRef.current = Date.now();
     currentViewChannelRef.current = channel;
     currentViewSourceRef.current = source;
+
+    // 设置定期保存（每30秒保存一次）
+    autoSaveIntervalRef.current = setInterval(() => {
+      recordLiveViewWithoutReset();
+    }, 30000); // 30秒
+  };
+
+  // 停止追踪直播观看
+  const stopTrackingView = () => {
+    // 清除定时器
+    if (autoSaveIntervalRef.current) {
+      clearInterval(autoSaveIntervalRef.current);
+      autoSaveIntervalRef.current = null;
+    }
+
+    // 记录最后的观看时间
+    if (viewStartTimeRef.current) {
+      recordLiveView();
+    }
   };
 
   // 刷新直播源
@@ -969,13 +1041,11 @@ function LivePageClient() {
     fetchLiveSources();
   }, []);
 
-  // 页面卸载时记录观看
+  // 页面卸载时记录观看并清理定时器
   useEffect(() => {
     return () => {
-      // 组件卸载时记录观看
-      if (viewStartTimeRef.current) {
-        recordLiveView();
-      }
+      // 组件卸载时停止追踪并记录观看
+      stopTrackingView();
     };
   }, []);
 
@@ -983,9 +1053,15 @@ function LivePageClient() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // 页面隐藏时记录观看
-        if (viewStartTimeRef.current) {
-          recordLiveView();
+        // 页面隐藏时停止追踪并记录观看
+        stopTrackingView();
+      } else {
+        // 页面重新可见时，如果有当前频道，重新开始追踪
+        if (currentViewChannelRef.current && currentViewSourceRef.current) {
+          startTrackingView(
+            currentViewChannelRef.current,
+            currentViewSourceRef.current
+          );
         }
       }
     };

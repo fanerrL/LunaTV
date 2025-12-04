@@ -98,38 +98,13 @@ export async function GET(request: NextRequest) {
             userLastViewTime = record.endTime;
           }
 
-          // 统计频道
+          // 统计用户级别的频道和来源
           const channelKey = `${record.channelName}`;
           userChannelCount[channelKey] =
             (userChannelCount[channelKey] || 0) + 1;
-          if (!channelCount[channelKey]) {
-            channelCount[channelKey] = {
-              count: 0,
-              totalTime: 0,
-              channelId: record.channelId,
-            };
-          }
-          channelCount[channelKey].count += 1;
-          channelCount[channelKey].totalTime += record.duration;
 
-          // 统计来源
           const sourceKey = record.sourceName;
           userSourceCount[sourceKey] = (userSourceCount[sourceKey] || 0) + 1;
-          if (!sourceCount[sourceKey]) {
-            sourceCount[sourceKey] = { count: 0, sourceKey: record.sourceKey };
-          }
-          sourceCount[sourceKey].count += 1;
-
-          // 统计近7天数据
-          const recordDate = new Date(record.endTime);
-          if (recordDate >= sevenDaysAgo) {
-            const dateKey = recordDate.toISOString().split('T')[0];
-            if (!dailyData[dateKey]) {
-              dailyData[dateKey] = { watchTime: 0, views: 0 };
-            }
-            dailyData[dateKey].watchTime += record.duration;
-            dailyData[dateKey].views += 1;
-          }
         });
 
         // 获取最近观看记录（按时间倒序，最多10条）
@@ -163,6 +138,7 @@ export async function GET(request: NextRequest) {
           totalViews: records.length,
           lastViewTime: userLastViewTime,
           recentRecords,
+          allRecords: records, // 返回所有记录用于全局统计
           avgWatchTime: records.length > 0 ? userWatchTime / records.length : 0,
           mostWatchedChannel,
           mostWatchedSource,
@@ -183,11 +159,49 @@ export async function GET(request: NextRequest) {
         userStats.push(result);
         totalWatchTime += result.totalWatchTime;
         totalViews += result.totalViews;
+
+        // 统计全局频道、来源和每日数据
+        result.allRecords.forEach((record) => {
+          // 统计频道
+          const channelKey = record.channelName;
+          if (!channelCount[channelKey]) {
+            channelCount[channelKey] = {
+              count: 0,
+              totalTime: 0,
+              channelId: record.channelId,
+            };
+          }
+          channelCount[channelKey].count += 1;
+          channelCount[channelKey].totalTime += record.duration;
+
+          // 统计来源
+          const sourceKey = record.sourceName;
+          if (!sourceCount[sourceKey]) {
+            sourceCount[sourceKey] = { count: 0, sourceKey: record.sourceKey };
+          }
+          sourceCount[sourceKey].count += 1;
+
+          // 统计近7天数据
+          const recordDate = new Date(record.endTime);
+          if (recordDate >= sevenDaysAgo) {
+            const dateKey = recordDate.toISOString().split('T')[0];
+            if (!dailyData[dateKey]) {
+              dailyData[dateKey] = { watchTime: 0, views: 0 };
+            }
+            dailyData[dateKey].watchTime += record.duration;
+            dailyData[dateKey].views += 1;
+          }
+        });
       }
     }
 
     // 按观看时间降序排序
     userStats.sort((a, b) => b.totalWatchTime - a.totalWatchTime);
+
+    // 移除 allRecords 字段（仅用于内部统计）
+    userStats.forEach((stat: any) => {
+      delete stat.allRecords;
+    });
 
     // 整理热门频道数据（取前10个）
     const topChannels = Object.entries(channelCount)

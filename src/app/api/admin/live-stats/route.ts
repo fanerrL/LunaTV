@@ -183,37 +183,6 @@ export async function GET(request: NextRequest) {
         userStats.push(result);
         totalWatchTime += result.totalWatchTime;
         totalViews += result.totalViews;
-
-        // 收集频道和来源统计
-        result.recentRecords.forEach((record) => {
-          const channelKey = record.channelName;
-          if (!channelCount[channelKey]) {
-            channelCount[channelKey] = {
-              count: 0,
-              totalTime: 0,
-              channelId: record.channelId,
-            };
-          }
-          channelCount[channelKey].count += 1;
-          channelCount[channelKey].totalTime += record.duration;
-
-          const sourceKey = record.sourceName;
-          if (!sourceCount[sourceKey]) {
-            sourceCount[sourceKey] = { count: 0, sourceKey: record.sourceKey };
-          }
-          sourceCount[sourceKey].count += 1;
-
-          // 统计近7天数据
-          const recordDate = new Date(record.endTime);
-          if (recordDate >= sevenDaysAgo) {
-            const dateKey = recordDate.toISOString().split('T')[0];
-            if (!dailyData[dateKey]) {
-              dailyData[dateKey] = { watchTime: 0, views: 0 };
-            }
-            dailyData[dateKey].watchTime += record.duration;
-            dailyData[dateKey].views += 1;
-          }
-        });
       }
     }
 

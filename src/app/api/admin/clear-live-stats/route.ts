@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
 
       try {
-        await storage.deleteCache(userRecordsKey);
+        await storage.deleteDirectKey(userRecordsKey);
         deletedCount++;
       } catch (error) {
         console.error(`[清理直播统计] 清理用户 ${user.username} 失败:`, error);

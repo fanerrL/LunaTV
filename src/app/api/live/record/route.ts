@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const storage = db;
     const userRecordsKey = `live_views:${authInfo.username}`;
     const existingRecords: LiveViewRecord[] =
-      (await storage.getCache(userRecordsKey)) || [];
+      (await storage.getDirectKey(userRecordsKey)) || [];
 
     // 查找是否有最近的同频道、同直播源的记录（1分钟内）
     // 使用 1 分钟窗口可以合并连续观看的片段，但切换频道后再回来会算新的一次
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await storage.setCache(userRecordsKey, existingRecords);
+    await storage.setDirectKey(userRecordsKey, existingRecords);
 
     return NextResponse.json({ success: true });
   } catch (error) {

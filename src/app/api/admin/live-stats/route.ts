@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 
         // 添加超时控制，避免 Redis 查询卡住
         const records: LiveViewRecord[] = await Promise.race([
-          storage.getCache(userRecordsKey),
+          storage.getDirectKey(userRecordsKey),
           new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000)), // 5秒超时
         ]).then((result) => result || []);
 

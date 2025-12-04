@@ -604,11 +604,13 @@ function LivePageClient() {
 
       // 默认选中第一个频道
       if (channels.length > 0) {
+        let selectedChannel: LiveChannel;
         if (needLoadChannel) {
           const foundChannel = channels.find(
             (c: LiveChannel) => c.id === needLoadChannel
           );
           if (foundChannel) {
+            selectedChannel = foundChannel;
             setCurrentChannel(foundChannel);
             setVideoUrl(foundChannel.url);
             // 延迟滚动到选中的频道
@@ -616,13 +618,18 @@ function LivePageClient() {
               scrollToChannel(foundChannel);
             }, 200);
           } else {
+            selectedChannel = channels[0];
             setCurrentChannel(channels[0]);
             setVideoUrl(channels[0].url);
           }
         } else {
+          selectedChannel = channels[0];
           setCurrentChannel(channels[0]);
           setVideoUrl(channels[0].url);
         }
+
+        // 开始追踪初始频道的观看
+        startTrackingView(selectedChannel, source);
       }
 
       // 按分组组织频道

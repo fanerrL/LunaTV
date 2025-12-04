@@ -163,12 +163,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '用户名或密码错误' }, { status: 401 });
     }
 
-    const config = await getConfig();
-    const user = config.UserConfig.Users.find((u) => u.username === username);
-    if (user && user.banned) {
-      return NextResponse.json({ error: '用户被封禁' }, { status: 401 });
-    }
-
     // 校验用户密码
     try {
       const pass = await db.verifyUser(username, password);
@@ -177,6 +171,13 @@ export async function POST(req: NextRequest) {
           { error: '用户名或密码错误' },
           { status: 401 }
         );
+      }
+
+      // 密码验证成功后，检查用户是否被封禁
+      const config = await getConfig();
+      const user = config.UserConfig.Users.find((u) => u.username === username);
+      if (user && user.banned) {
+        return NextResponse.json({ error: '账号已被封禁' }, { status: 403 });
       }
 
       // 验证成功，设置认证cookie

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -240,6 +240,13 @@ export async function GET(request: NextRequest) {
         views: data.views,
       });
     }
+
+    console.log(`[直播统计] 最终统计结果:`);
+    console.log(`  - 总观看时长: ${totalWatchTime}秒`);
+    console.log(`  - 总观看次数: ${totalViews}`);
+    console.log(`  - 热门频道数: ${topChannels.length}`);
+    console.log(`  - 热门来源数: ${topSources.length}`);
+    console.log(`  - 用户统计数: ${userStats.length}`);
 
     const result: LiveStatsResult = {
       totalUsers: allUsers.length,

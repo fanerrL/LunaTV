@@ -315,8 +315,14 @@ function LivePageClient() {
       return;
     }
 
+    console.log(
+      `[直播统计] 保存观看记录: ${currentViewChannelRef.current.name} (${
+        currentViewSourceRef.current.name
+      }), 时长: ${Math.floor(duration / 1000)}秒`
+    );
+
     try {
-      await fetch('/api/live/record', {
+      const response = await fetch('/api/live/record', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -333,10 +339,15 @@ function LivePageClient() {
         }),
       });
 
+      const result = await response.json();
+      if (!result.success) {
+        console.error('[直播统计] 保存失败:', result);
+      }
+
       // 记录成功后，更新开始时间为当前时间，继续追踪
       viewStartTimeRef.current = endTime;
     } catch (error) {
-      console.error('记录直播观看失败:', error);
+      console.error('[直播统计] 保存失败:', error);
     }
   };
 
@@ -390,10 +401,15 @@ function LivePageClient() {
   };
 
   // 开始追踪直播观看
-  const startTrackingView = (channel: LiveChannel, source: LiveSource) => {
-    // 先记录之前的观看
+  const startTrackingView = async (
+    channel: LiveChannel,
+    source: LiveSource
+  ) => {
+    console.log(`[直播统计] 开始追踪: ${channel.name} (${source.name})`);
+
+    // 先记录之前的观看（等待完成）
     if (viewStartTimeRef.current) {
-      recordLiveView();
+      await recordLiveView();
     }
 
     // 清除之前的定时器
@@ -1056,20 +1072,12 @@ function LivePageClient() {
     };
   }, []);
 
-  // 监听页面可见性变化，记录观看
+  // 监听页面可见性变化（仅用于日志记录）
+  // 不再停止追踪，让计时器在后台继续运行
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        // 页面隐藏时停止追踪并记录观看
-        stopTrackingView();
-      } else {
-        // 页面重新可见时，如果有当前频道，重新开始追踪
-        if (currentViewChannelRef.current && currentViewSourceRef.current) {
-          startTrackingView(
-            currentViewChannelRef.current,
-            currentViewSourceRef.current
-          );
-        }
+        console.log('[直播统计] 页面隐藏，后台继续追踪');
       }
     };
 

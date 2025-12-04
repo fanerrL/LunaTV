@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm:*)",
+      "Bash(npm run dev)",
+      "Bash(cat:*)",
+      "Bash(taskkill:*)",
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(npx eslint:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: 添加直播统计功能\n\n新增功能:\n- 添加直播观看记录追踪功能,自动记录用户观看直播的时长和频道信息\n- 新增直播统计页面 (/admin/live-stats),展示用户观看统计、热门频道、热门直播源等数据\n- 在用户菜单中添加\"直播统计\"入口,方便管理员访问\n\n修复问题:\n- 修复直播统计API的用户查询限制,移除100用户上限,确保所有用户数据都能正确显示\n- 修复 SiteConfig 未定义导致的配置加载错误,添加默认值检查\n\n技术细节:\n- 使用 Redis 存储直播观看记录 (live_views:{username})\n- 观看时长超过5秒才会被记录\n- 支持页面切换和关闭时自动保存观看记录\n- 统计数据包括总观看时长、观看次数、热门频道、热门直播源、每日统计等\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git config:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node clear-live-stats.js)",
+      "Bash(npx tsx clear-live-stats.ts)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

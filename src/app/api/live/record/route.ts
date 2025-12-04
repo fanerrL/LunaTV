@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -60,32 +60,64 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const record: LiveViewRecord = {
-      username: authInfo.username,
-      channelName,
-      channelId,
-      sourceName,
-      sourceKey,
-      startTime,
-      endTime,
-      duration,
-      channelGroup,
-      channelLogo,
-    };
-
-    // 保存到数据库
-    const storage = db;
-    const key = `live_view_${authInfo.username}_${Date.now()}`;
-    await storage.setCache(key, record);
-
     // 同时保存到用户的直播观看记录列表
+    const storage = db;
     const userRecordsKey = `live_views:${authInfo.username}`;
-    const existingRecords = (await storage.getCache(userRecordsKey)) || [];
-    existingRecords.push(record);
+    const existingRecords: LiveViewRecord[] =
+      (await storage.getCache(userRecordsKey)) || [];
 
-    // 只保留最近100条记录
-    if (existingRecords.length > 100) {
-      existingRecords.splice(0, existingRecords.length - 100);
+    // 查找是否有最近的同频道、同直播源的记录（1分钟内）
+    // 使用 1 分钟窗口可以合并连续观看的片段，但切换频道后再回来会算新的一次
+    const oneMinuteAgo = startTime - 60 * 1000;
+    let merged = false;
+
+    for (let i = existingRecords.length - 1; i >= 0; i--) {
+      const lastRecord = existingRecords[i];
+
+      // 如果是同一个频道、同一个直播源，且时间间隔在1分钟内，则合并
+      if (
+        lastRecord.channelId === channelId &&
+        lastRecord.sourceKey === sourceKey &&
+        lastRecord.endTime >= oneMinuteAgo
+      ) {
+        console.log(
+          `[直播统计] 合并记录: ${channelName} (${sourceName}), 原时长: ${lastRecord.duration}秒, 新增: ${duration}秒`
+        );
+
+        // 合并记录：保持原始开始时间，更新结束时间和总时长
+        lastRecord.endTime = endTime;
+        lastRecord.duration = lastRecord.duration + duration;
+
+        merged = true;
+        break;
+      }
+    }
+
+    // 如果没有找到可以合并的记录，创建新记录
+    if (!merged) {
+      console.log(
+        `[直播统计] 创建新记录: ${channelName} (${sourceName}), 时长: ${duration}秒`
+      );
+
+      const record: LiveViewRecord = {
+        username: authInfo.username,
+        channelName,
+        channelId,
+        sourceName,
+        sourceKey,
+        startTime,
+        endTime,
+        duration,
+        channelGroup,
+        channelLogo,
+      };
+
+      existingRecords.push(record);
+
+      // 只保留最近100条记录
+      if (existingRecords.length > 100) {
+        existingRecords.splice(0, existingRecords.length - 100);
+      }
     }
 
     await storage.setCache(userRecordsKey, existingRecords);

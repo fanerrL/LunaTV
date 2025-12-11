@@ -17,7 +17,11 @@
       "Bash(git commit:*)",
       "Bash(npx tsc:*)",
       "Bash(node clear-live-stats.js)",
-      "Bash(npx tsx clear-live-stats.ts)"
+      "Bash(npx tsx clear-live-stats.ts)",
+      "Bash(gh api:*)",
+      "Bash(git remote:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)"
     ],
     "deny": [],
     "ask": []

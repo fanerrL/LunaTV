@@ -53,6 +53,7 @@ import CacheManager from '@/components/CacheManager';
 import DataMigration from '@/components/DataMigration';
 import ImportExportModal from '@/components/ImportExportModal';
 import PageLayout from '@/components/PageLayout';
+import ShortDramaConfig from '@/components/ShortDramaConfig';
 import SourceTestModule from '@/components/SourceTestModule';
 import { TelegramAuthConfig } from '@/components/TelegramAuthConfig';
 import TVBoxSecurityConfig from '@/components/TVBoxSecurityConfig';
@@ -6822,6 +6823,7 @@ function AdminPageClient() {
     netdiskConfig: false,
     aiRecommendConfig: false,
     youtubeConfig: false,
+    shortDramaConfig: false,
     tvboxSecurityConfig: false,
     telegramAuthConfig: false,
     configFile: false,
@@ -7085,6 +7087,21 @@ function AdminPageClient() {
               onToggle={() => toggleTab('youtubeConfig')}
             >
               <YouTubeConfig config={config} refreshConfig={fetchConfig} />
+            </CollapsibleTab>
+
+            {/* 短剧API配置标签 */}
+            <CollapsibleTab
+              title='短剧API配置'
+              icon={
+                <Video
+                  size={20}
+                  className='text-purple-600 dark:text-purple-400'
+                />
+              }
+              isExpanded={expandedTabs.shortDramaConfig}
+              onToggle={() => toggleTab('shortDramaConfig')}
+            >
+              <ShortDramaConfig config={config} refreshConfig={fetchConfig} />
             </CollapsibleTab>
 
             {/* TVBox安全配置标签 */}

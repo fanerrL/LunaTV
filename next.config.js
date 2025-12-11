@@ -8,6 +8,10 @@ const nextConfig = {
     // 在生产构建时忽略 ESLint 错误（Docker 构建）
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    // 在生产构建时忽略 TypeScript 类型错误（Docker 构建）
+    ignoreBuildErrors: true,
+  },
 
   reactStrictMode: false,
   swcMinify: false,

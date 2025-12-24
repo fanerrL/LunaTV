@@ -154,9 +154,14 @@ async function settleWatchSession(
  * 处理心跳上报请求
  */
 export async function POST(request: NextRequest) {
+  console.log('[LiveStats API] 收到心跳请求');
+
   // 检查存储类型
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
+  console.log('[LiveStats API] 存储类型:', storageType);
+
   if (storageType === 'localstorage') {
+    console.log('[LiveStats API] 本地存储模式，不支持直播统计');
     return NextResponse.json(
       { error: '本地存储模式不支持直播统计' },
       { status: 400 }
@@ -165,6 +170,8 @@ export async function POST(request: NextRequest) {
 
   // 验证用户身份
   const authInfo = getAuthInfoFromCookie(request);
+  console.log('[LiveStats API] 用户认证信息:', authInfo?.username || '未登录');
+
   if (!authInfo || !authInfo.username) {
     return NextResponse.json({ error: '未登录' }, { status: 401 });
   }
@@ -184,8 +191,17 @@ export async function POST(request: NextRequest) {
       sourceName,
     } = body;
 
+    console.log('[LiveStats API] 心跳参数:', {
+      sessionId,
+      channelId,
+      channelName,
+      sourceKey,
+      username,
+    });
+
     // 参数验证
     if (!sessionId || !channelId || !channelName || !sourceKey) {
+      console.log('[LiveStats API] 参数验证失败');
       return NextResponse.json(
         { error: '缺少必要参数' },
         { status: 400 }
@@ -197,10 +213,12 @@ export async function POST(request: NextRequest) {
 
     // 获取上次心跳状态
     const lastState: LiveWatchState | null = await db.getCache(watchKey);
+    console.log('[LiveStats API] 上次心跳状态:', lastState ? `heartbeatCount=${lastState.heartbeatCount}` : '无');
 
     if (lastState) {
       // 如果切换了频道，结算上一个频道的观看时长
       if (lastState.channelId !== channelId) {
+        console.log('[LiveStats API] 切换频道，结算上一个频道');
         await settleWatchSession(username, lastState, now);
 
         // 创建新的观看状态
@@ -217,6 +235,7 @@ export async function POST(request: NextRequest) {
         };
 
         await db.setCache(watchKey, newState, WATCH_STATE_TTL);
+        console.log('[LiveStats API] 创建新观看状态');
       } else {
         // 同一频道，更新心跳
         const updatedState: LiveWatchState = {
@@ -226,6 +245,7 @@ export async function POST(request: NextRequest) {
         };
 
         await db.setCache(watchKey, updatedState, WATCH_STATE_TTL);
+        console.log('[LiveStats API] 更新心跳计数:', updatedState.heartbeatCount);
       }
     } else {
       // 首次心跳，创建新的观看状态
@@ -242,6 +262,7 @@ export async function POST(request: NextRequest) {
       };
 
       await db.setCache(watchKey, newState, WATCH_STATE_TTL);
+      console.log('[LiveStats API] 首次心跳，创建观看状态');
     }
 
     return NextResponse.json({ success: true });

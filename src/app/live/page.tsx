@@ -1379,6 +1379,7 @@ function LivePageClient() {
         artPlayerRef.current.on('canplay', () => {
           setIsVideoLoading(false);
           isPlayingRef.current = true; // 标记为正在播放
+          console.log('[LiveStats] 播放状态变化: canplay, isPlaying =', true);
         });
 
         artPlayerRef.current.on('waiting', () => {
@@ -1388,15 +1389,18 @@ function LivePageClient() {
         artPlayerRef.current.on('error', (err: any) => {
           console.error('播放器错误:', err);
           isPlayingRef.current = false; // 出错时停止心跳
+          console.log('[LiveStats] 播放状态变化: error, isPlaying =', false);
         });
 
         // 监听播放/暂停状态变化
         artPlayerRef.current.on('play', () => {
           isPlayingRef.current = true;
+          console.log('[LiveStats] 播放状态变化: play, isPlaying =', true);
         });
 
         artPlayerRef.current.on('pause', () => {
           isPlayingRef.current = false;
+          console.log('[LiveStats] 播放状态变化: pause, isPlaying =', false);
         });
 
         if (artPlayerRef.current?.video) {
@@ -1475,17 +1479,40 @@ function LivePageClient() {
     // 心跳发送函数
     const sendHeartbeat = async () => {
       // 检查是否满足发送条件：页面可见 + 有当前频道 + 有当前源 + 视频在播放
-      if (
-        document.hidden ||
-        !currentChannelRef.current ||
-        !currentSourceRef.current ||
-        !isPlayingRef.current
-      ) {
+      console.log('[LiveStats] 心跳检查:', {
+        hidden: document.hidden,
+        hasChannel: !!currentChannelRef.current,
+        hasSource: !!currentSourceRef.current,
+        isPlaying: isPlayingRef.current,
+        sessionId: heartbeatSessionId.current,
+      });
+
+      if (document.hidden) {
+        console.log('[LiveStats] 跳过心跳: 页面不可见');
+        return;
+      }
+      if (!currentChannelRef.current) {
+        console.log('[LiveStats] 跳过心跳: 无当前频道');
+        return;
+      }
+      if (!currentSourceRef.current) {
+        console.log('[LiveStats] 跳过心跳: 无当前源');
+        return;
+      }
+      if (!isPlayingRef.current) {
+        console.log('[LiveStats] 跳过心跳: 视频未播放');
         return;
       }
 
       try {
-        await fetch('/api/live/heartbeat', {
+        console.log('[LiveStats] 发送心跳:', {
+          sessionId: heartbeatSessionId.current,
+          channelId: currentChannelRef.current.id,
+          channelName: currentChannelRef.current.name,
+          sourceKey: currentSourceRef.current.key,
+        });
+
+        const response = await fetch('/api/live/heartbeat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1498,19 +1525,32 @@ function LivePageClient() {
             sourceName: currentSourceRef.current.name,
           }),
         });
+
+        const result = await response.json();
+        console.log('[LiveStats] 心跳响应:', response.status, result);
       } catch (error) {
-        // 心跳失败不影响用户体验，静默处理
-        console.debug('[LiveStats] 心跳发送失败:', error);
+        console.error('[LiveStats] 心跳发送失败:', error);
       }
     };
 
     // 当有频道和源时，启动心跳
     if (currentChannel && currentSource) {
+      console.log('[LiveStats] 启动心跳定时器:', {
+        channelId: currentChannel.id,
+        channelName: currentChannel.name,
+        sourceKey: currentSource.key,
+      });
+
       // 立即发送第一次心跳
       sendHeartbeat();
 
       // 每30秒发送一次心跳
       heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30 * 1000);
+    } else {
+      console.log('[LiveStats] 未启动心跳: 缺少频道或源', {
+        hasChannel: !!currentChannel,
+        hasSource: !!currentSource,
+      });
     }
 
     // 清理函数

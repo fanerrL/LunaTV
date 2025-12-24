@@ -398,3 +398,97 @@ export interface PersonalizedReleaseRecommendation {
   }>;
   generatedAt: number; // 生成时间戳
 }
+
+// ============================================
+// 直播统计相关类型定义
+// ============================================
+
+/**
+ * 直播心跳请求参数
+ * 客户端每30秒发送一次心跳，用于追踪用户观看直播的行为
+ */
+export interface LiveHeartbeatRequest {
+  sessionId: string;        // 会话ID，用于区分多标签页
+  channelId: string;        // 频道ID
+  channelName: string;      // 频道名称
+  channelGroup: string;     // 频道分组
+  channelLogo?: string;     // 频道Logo
+  sourceKey: string;        // 直播源Key
+  sourceName: string;       // 直播源名称
+}
+
+/**
+ * 直播观看状态
+ * 存储在 Redis 中，用于追踪用户当前的观看状态
+ */
+export interface LiveWatchState {
+  channelId: string;        // 频道ID
+  channelName: string;      // 频道名称
+  channelGroup: string;     // 频道分组
+  channelLogo?: string;     // 频道Logo
+  sourceKey: string;        // 直播源Key
+  sourceName: string;       // 直播源名称
+  startTime: number;        // 开始观看时间戳
+  lastHeartbeat: number;    // 最后心跳时间戳
+  heartbeatCount: number;   // 心跳次数
+}
+
+/**
+ * 直播观看会话记录
+ * 当用户切换频道或离开时，结算生成的观看记录
+ */
+export interface LiveWatchSession {
+  channelId: string;        // 频道ID
+  channelName: string;      // 频道名称
+  channelGroup: string;     // 频道分组
+  channelLogo?: string;     // 频道Logo
+  sourceKey: string;        // 直播源Key
+  sourceName: string;       // 直播源名称
+  startTime: number;        // 开始观看时间戳
+  endTime: number;          // 结束观看时间戳
+  duration: number;         // 观看时长(秒)，基于心跳次数计算
+  heartbeatCount: number;   // 心跳次数，用于验证时长准确性
+}
+
+/**
+ * 用户直播统计汇总
+ */
+export interface UserLiveStats {
+  username: string;                 // 用户名
+  totalWatchTime: number;           // 总观看时长(秒)
+  totalSessions: number;            // 总观看次数
+  lastWatchTime: number;            // 最后观看时间戳
+  favoriteChannels: Array<{         // 最常看的频道列表
+    channelId: string;
+    channelName: string;
+    channelGroup: string;
+    watchTime: number;              // 该频道观看时长
+    watchCount: number;             // 该频道观看次数
+  }>;
+  recentSessions: LiveWatchSession[]; // 最近观看记录
+}
+
+/**
+ * 全站直播统计结果
+ */
+export interface GlobalLiveStats {
+  totalUsers: number;               // 观看用户数
+  totalWatchTime: number;           // 全站总观看时长(秒)
+  totalSessions: number;            // 全站总观看次数
+  todayActiveUsers: number;         // 今日活跃用户数
+  hotChannels: Array<{              // 热门频道排行
+    channelId: string;
+    channelName: string;
+    channelGroup: string;
+    totalWatchTime: number;         // 总观看时长
+    totalUsers: number;             // 观看用户数
+    totalSessions: number;          // 观看次数
+  }>;
+  dailyTrend: Array<{               // 每日趋势(近7天)
+    date: string;                   // 日期 YYYY-MM-DD
+    watchTime: number;              // 观看时长
+    sessions: number;               // 观看次数
+    users: number;                  // 活跃用户数
+  }>;
+  userStats: UserLiveStats[];       // 用户统计列表
+}

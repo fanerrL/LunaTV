@@ -97,6 +97,11 @@ function LivePageClient() {
 
   // 切换直播源状态
   const [isSwitchingSource, setIsSwitchingSource] = useState(false);
+
+  // 直播统计心跳相关
+  const heartbeatSessionId = useRef<string>('');
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isPlayingRef = useRef<boolean>(false);
   
   // 刷新相关状态
   const [isRefreshingSource, setIsRefreshingSource] = useState(false);
@@ -1373,6 +1378,7 @@ function LivePageClient() {
 
         artPlayerRef.current.on('canplay', () => {
           setIsVideoLoading(false);
+          isPlayingRef.current = true; // 标记为正在播放
         });
 
         artPlayerRef.current.on('waiting', () => {
@@ -1381,6 +1387,16 @@ function LivePageClient() {
 
         artPlayerRef.current.on('error', (err: any) => {
           console.error('播放器错误:', err);
+          isPlayingRef.current = false; // 出错时停止心跳
+        });
+
+        // 监听播放/暂停状态变化
+        artPlayerRef.current.on('play', () => {
+          isPlayingRef.current = true;
+        });
+
+        artPlayerRef.current.on('pause', () => {
+          isPlayingRef.current = false;
         });
 
         if (artPlayerRef.current?.video) {
@@ -1425,6 +1441,13 @@ function LivePageClient() {
   useEffect(() => {
     const handleBeforeUnload = () => {
       cleanupPlayer();
+      // 发送心跳结束信号
+      if (heartbeatSessionId.current) {
+        navigator.sendBeacon(
+          '/api/live/heartbeat/end',
+          JSON.stringify({ sessionId: heartbeatSessionId.current })
+        );
+      }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -1432,8 +1455,72 @@ function LivePageClient() {
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       cleanupPlayer();
+      // 组件卸载时也发送结束信号
+      if (heartbeatSessionId.current) {
+        navigator.sendBeacon(
+          '/api/live/heartbeat/end',
+          JSON.stringify({ sessionId: heartbeatSessionId.current })
+        );
+      }
     };
   }, []);
+
+  // 直播统计心跳逻辑
+  useEffect(() => {
+    // 生成唯一会话ID（仅在首次加载时生成）
+    if (!heartbeatSessionId.current) {
+      heartbeatSessionId.current = crypto.randomUUID();
+    }
+
+    // 心跳发送函数
+    const sendHeartbeat = async () => {
+      // 检查是否满足发送条件：页面可见 + 有当前频道 + 有当前源 + 视频在播放
+      if (
+        document.hidden ||
+        !currentChannelRef.current ||
+        !currentSourceRef.current ||
+        !isPlayingRef.current
+      ) {
+        return;
+      }
+
+      try {
+        await fetch('/api/live/heartbeat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: heartbeatSessionId.current,
+            channelId: currentChannelRef.current.id,
+            channelName: currentChannelRef.current.name,
+            channelGroup: currentChannelRef.current.group,
+            channelLogo: currentChannelRef.current.logo,
+            sourceKey: currentSourceRef.current.key,
+            sourceName: currentSourceRef.current.name,
+          }),
+        });
+      } catch (error) {
+        // 心跳失败不影响用户体验，静默处理
+        console.debug('[LiveStats] 心跳发送失败:', error);
+      }
+    };
+
+    // 当有频道和源时，启动心跳
+    if (currentChannel && currentSource) {
+      // 立即发送第一次心跳
+      sendHeartbeat();
+
+      // 每30秒发送一次心跳
+      heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30 * 1000);
+    }
+
+    // 清理函数
+    return () => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+    };
+  }, [currentChannel?.id, currentSource?.key]);
 
   // 全局快捷键处理
   useEffect(() => {

@@ -1074,6 +1074,20 @@ export const UserMenu: React.FC = () => {
             </button>
           )}
 
+          {/* 直播统计按钮 - 仅管理员可见 */}
+          {showAdminPanel && (
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                router.push('/admin/live-stats');
+              }}
+              className='w-full px-3 py-2 text-left flex items-center gap-2.5 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-[background-color] duration-150 ease-in-out text-sm'
+            >
+              <Tv className='w-4 h-4 text-gray-500 dark:text-gray-400' />
+              <span className='font-medium'>直播统计</span>
+            </button>
+          )}
+
           {/* 上映日程按钮 */}
           <button
             onClick={handleReleaseCalendar}

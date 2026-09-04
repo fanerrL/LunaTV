@@ -224,9 +224,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '用户被封禁' }, { status: 401 });
     }
 
-    // 校验用户密码（V1）
+    // 校验用户密码(V1 优先;若该用户只有 V2 存储则回退 V2)
+    // 背景:注册/后台添加用户视配置可能只写 V2(u:<user>:info + users:list,
+    // 密码为 SHA256),而登录此前只查 V1 u:<user>:pwd,导致这类账号
+    // “注册成功但退出后无法登录”。这里在 V1 校验失败时回退到 V2,
+    // 兼容两种存储并存的情况。
     try {
-      const pass = await db.verifyUser(username, password);
+      let pass = await db.verifyUser(username, password);
+
+      if (!pass) {
+        const existsV2 = await db.checkUserExistV2(username);
+        if (existsV2) {
+          pass = await db.verifyUserV2(username, password);
+        }
+      }
 
       if (!pass) {
         await recordLoginFailure(clientIP);
